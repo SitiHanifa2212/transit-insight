@@ -1,13 +1,12 @@
-
-import sqlite3
 from pathlib import Path
 
 import pandas as pd
 import plotly.express as px
 import streamlit as st
-from sqlalchemy import create_engine, text
-from sqlalchemy.engine import URL
 
+# ==================================================
+# KONFIGURASI APLIKASI
+# ==================================================
 st.set_page_config(
     page_title="Transit Insight",
     page_icon="🚌",
@@ -15,197 +14,165 @@ st.set_page_config(
 )
 
 FOLDER = Path(__file__).parent
-SQLITE_PATH = FOLDER / "transit_reference.db"
+DATA_PATH = FOLDER / "dashboard_data.csv"
 
 st.title("🚌 Transit Insight")
 st.subheader("Dashboard Analisis Transaksi TransJakarta")
-st.caption(
-    "Integrasi PostgreSQL, SQLite, Pandas, Streamlit, dan Plotly"
-)
+st.caption("Integrasi PostgreSQL + SQLite → Pandas → Streamlit + Plotly")
 
-@st.cache_resource
-def buat_engine(password):
-    url = URL.create(
-        "postgresql+psycopg",
-        username="postgres",
-        password=password,
-        host="127.0.0.1",
-        port=5432,
-        database="transit_insight",
-    )
-    return create_engine(url, pool_pre_ping=True)
-
-@st.cache_data(ttl=300)
-def muat_data(password):
-    engine = buat_engine(password)
-
-    with engine.connect() as conn:
-        transaksi = pd.read_sql_query(
-            text("""
-                SELECT
-                    "transID",
-                    "corridorID",
-                    "corridorName",
-                    "tapInStops",
-                    "tapInStopsName",
-                    "tapOutStops",
-                    "tapOutStopsName",
-                    "tapInTime",
-                    "tapOutTime",
-                    "payAmount",
-                    durasi_menit
-                FROM transaksi
-            """),
-            conn,
+# ==================================================
+# MEMUAT DATA CSV — TANPA PASSWORD DATABASE
+# ==================================================
+@st.cache_data
+def muat_data():
+    if not DATA_PATH.exists():
+        raise FileNotFoundError(
+            f"File tidak ditemukan: {DATA_PATH}"
         )
 
-    with sqlite3.connect(SQLITE_PATH) as conn:
-        koridor = pd.read_sql_query(
-            "SELECT * FROM koridor", conn
+    data = pd.read_csv(DATA_PATH)
+
+    kolom_wajib = [
+        "payAmount",
+        "durasi_menit",
+        "corridorName",
+        "tapInTime",
+        "tapInStopsName",
+        "tapOutStopsName",
+    ]
+
+    kolom_hilang = [
+        kolom for kolom in kolom_wajib
+        if kolom not in data.columns
+    ]
+
+    if kolom_hilang:
+        raise ValueError(
+            "Kolom CSV tidak lengkap: "
+            + ", ".join(kolom_hilang)
         )
-        halte = pd.read_sql_query(
-            "SELECT * FROM halte", conn
-        )
-
-    data = transaksi.merge(
-        koridor,
-        on=["corridorID", "corridorName"],
-        how="left",
-        validate="many_to_one",
-    )
-
-    halte_unik = (
-        halte.dropna(subset=["kode_halte"])
-        .drop_duplicates(subset=["kode_halte"])
-    )
-
-    data = data.merge(
-        halte_unik[["kode_halte", "latitude", "longitude"]],
-        left_on="tapInStops",
-        right_on="kode_halte",
-        how="left",
-        validate="many_to_one",
-    )
 
     data["tapInTime"] = pd.to_datetime(
         data["tapInTime"], errors="coerce"
     )
+
+    if "tapOutTime" in data.columns:
+        data["tapOutTime"] = pd.to_datetime(
+            data["tapOutTime"], errors="coerce"
+        )
+
     data["tanggal"] = data["tapInTime"].dt.date
     data["jam"] = data["tapInTime"].dt.hour
-    data["payAmount"] = pd.to_numeric(
-        data["payAmount"], errors="coerce"
-    )
-    data["durasi_menit"] = pd.to_numeric(
-        data["durasi_menit"], errors="coerce"
-    )
+
+    for kolom in ["payAmount", "durasi_menit"]:
+        data[kolom] = pd.to_numeric(
+            data[kolom], errors="coerce"
+        )
 
     return data
 
-with st.sidebar:
-    st.header("Koneksi Database")
-    password = st.text_input(
-        "Password PostgreSQL",
-        type="password",
-    )
-    st.caption("Masukkan password PostgreSQL lokal.")
-
-if not password:
-    st.info(
-        "Masukkan password PostgreSQL di sidebar untuk "
-        "memuat dashboard."
-    )
-    st.stop()
-
-if not SQLITE_PATH.exists():
-    st.error("File transit_reference.db tidak ditemukan.")
-    st.stop()
 
 try:
-    with st.spinner("Mengambil data dari kedua database..."):
-        df = muat_data(password)
+    with st.spinner("Memuat data dashboard..."):
+        data_asli = muat_data()
 except Exception as error:
-    st.error(
-        "Data gagal dimuat. Periksa password, status PostgreSQL, "
-        "dan struktur tabel database."
-    )
+    st.error("Data dashboard gagal dimuat.")
     st.code(str(error))
     st.stop()
 
-if df.empty:
+if data_asli.empty:
     st.warning("Tidak ada transaksi untuk ditampilkan.")
     st.stop()
 
+df = data_asli.copy()
+
+# ==================================================
+# FILTER SIDEBAR
+# ==================================================
 with st.sidebar:
-    st.divider()
-    st.header("Filter")
+    st.header("Filter Dashboard")
 
     tanggal_tersedia = df["tanggal"].dropna()
 
     if not tanggal_tersedia.empty:
-        tanggal = st.date_input(
+        tanggal_awal = min(tanggal_tersedia)
+        tanggal_akhir = max(tanggal_tersedia)
+
+        rentang = st.date_input(
             "Rentang tanggal",
-            value=(
-                min(tanggal_tersedia),
-                max(tanggal_tersedia),
-            ),
-            min_value=min(tanggal_tersedia),
-            max_value=max(tanggal_tersedia),
+            value=(tanggal_awal, tanggal_akhir),
+            min_value=tanggal_awal,
+            max_value=tanggal_akhir,
         )
 
-        if isinstance(tanggal, (tuple, list)) and len(tanggal) == 2:
-            df = df[df["tanggal"].between(tanggal[0], tanggal[1])]
+        if isinstance(rentang, (tuple, list)):
+            if len(rentang) == 2:
+                mulai, selesai = rentang
+                df = df[
+                    df["tanggal"].between(mulai, selesai)
+                ]
+            elif len(rentang) == 1:
+                df = df[df["tanggal"] == rentang[0]]
 
     semua_koridor = sorted(
         df["corridorName"].dropna().unique().tolist()
     )
 
-    pilihan = st.multiselect(
-        "Koridor",
+    pilihan_koridor = st.multiselect(
+        "Pilih koridor",
         options=semua_koridor,
         default=semua_koridor,
     )
 
-    df = df[df["corridorName"].isin(pilihan)]
+    df = df[df["corridorName"].isin(pilihan_koridor)]
 
+# ==================================================
+# VALIDASI FILTER
+# ==================================================
 if df.empty:
-    st.warning("Tidak ada data yang sesuai dengan filter.")
+    st.warning("Tidak ada transaksi yang sesuai dengan filter.")
     st.stop()
 
-# Ringkasan
 st.caption(f"Jumlah data setelah filter: {len(df):,} transaksi")
 
+# ==================================================
+# RINGKASAN UTAMA
+# ==================================================
 k1, k2, k3, k4 = st.columns(4)
 
 k1.metric("Total Transaksi", f"{len(df):,}")
 
-tarif_total = df["payAmount"].sum(min_count=1)
+total_tarif = df["payAmount"].sum(min_count=1)
 k2.metric(
     "Total Nilai Tarif",
-    f"Rp {tarif_total:,.0f}"
-    if pd.notna(tarif_total) else "N/A",
+    f"Rp {total_tarif:,.0f}"
+    if pd.notna(total_tarif) else "N/A",
 )
 
-tarif_rata = df["payAmount"].mean()
+rata_tarif = df["payAmount"].mean()
 k3.metric(
     "Rata-rata Tarif",
-    f"Rp {tarif_rata:,.0f}"
-    if pd.notna(tarif_rata) else "N/A",
+    f"Rp {rata_tarif:,.0f}"
+    if pd.notna(rata_tarif) else "N/A",
 )
 
-durasi_rata = df["durasi_menit"].mean()
+rata_durasi = df["durasi_menit"].mean()
 k4.metric(
     "Rata-rata Durasi",
-    f"{durasi_rata:.1f} menit"
-    if pd.notna(durasi_rata) else "N/A",
+    f"{rata_durasi:.1f} menit"
+    if pd.notna(rata_durasi) else "N/A",
 )
 
 st.caption(
-    "Total nilai tarif dihitung dari nilai payAmount yang tersedia, "
-    "bukan klaim pendapatan resmi TransJakarta."
+    "Nilai tarif merupakan hasil perhitungan dari kolom payAmount "
+    "pada dataset, bukan pendapatan resmi TransJakarta."
 )
 
 st.divider()
 
+# ==================================================
+# TRANSAKSI PER JAM
+# ==================================================
 kiri, kanan = st.columns(2)
 
 with kiri:
@@ -226,17 +193,15 @@ with kiri:
         y="Jumlah Transaksi",
         markers=True,
         title="Jumlah Transaksi Berdasarkan Jam Tap-In",
-        labels={
-            "jam": "Jam (0–23)",
-            "Jumlah Transaksi": "Jumlah Transaksi",
-        },
+        labels={"jam": "Jam (0–23)"},
     )
+
     st.plotly_chart(fig_jam, use_container_width=True)
 
 with kanan:
     st.subheader("10 Koridor Teratas")
 
-    top = (
+    top_koridor = (
         df["corridorName"]
         .dropna()
         .value_counts()
@@ -246,15 +211,19 @@ with kanan:
         .reset_index(name="Jumlah Transaksi")
     )
 
-    fig_top = px.bar(
-        top,
+    fig_koridor = px.bar(
+        top_koridor,
         x="Jumlah Transaksi",
         y="Koridor",
         orientation="h",
         title="Koridor Berdasarkan Jumlah Transaksi",
     )
-    st.plotly_chart(fig_top, use_container_width=True)
 
+    st.plotly_chart(fig_koridor, use_container_width=True)
+
+# ==================================================
+# HALTE DAN DISTRIBUSI TARIF
+# ==================================================
 kiri, kanan = st.columns(2)
 
 with kiri:
@@ -277,46 +246,54 @@ with kiri:
         orientation="h",
         title="Halte Berdasarkan Jumlah Tap-In",
     )
+
     st.plotly_chart(fig_halte, use_container_width=True)
 
 with kanan:
     st.subheader("Distribusi Tarif")
 
-    tarif = df.dropna(subset=["payAmount"])
+    data_tarif = df.dropna(subset=["payAmount"])
 
-    if not tarif.empty:
+    if not data_tarif.empty:
         fig_tarif = px.histogram(
-            tarif,
+            data_tarif,
             x="payAmount",
             nbins=20,
             title="Sebaran Nilai Tarif",
             labels={"payAmount": "Nilai Tarif (Rp)"},
         )
+
         st.plotly_chart(fig_tarif, use_container_width=True)
     else:
         st.info("Tidak ada data tarif yang tersedia.")
 
+# ==================================================
+# TABEL TRANSAKSI
+# ==================================================
 st.divider()
 st.subheader("Pratinjau Transaksi")
 
-kolom = [
-    "corridorName",
-    "tapInStopsName",
-    "tapOutStopsName",
-    "tapInTime",
-    "tapOutTime",
-    "durasi_menit",
-    "payAmount",
+kolom_tabel = [
+    kolom for kolom in [
+        "corridorName",
+        "tapInStopsName",
+        "tapOutStopsName",
+        "tapInTime",
+        "tapOutTime",
+        "durasi_menit",
+        "payAmount",
+    ]
+    if kolom in df.columns
 ]
 
 st.dataframe(
-    df[kolom].head(100),
+    df[kolom_tabel].head(100),
     use_container_width=True,
     hide_index=True,
 )
 
 st.caption(
-    "Sumber: dataset transaksi TransJakarta dari Kaggle. "
-    "Data referensi koridor dan halte berasal dari pengolahan dataset "
-    "yang sama ke dalam SQLite."
+    "Sumber data: dataset transaksi TransJakarta dari Kaggle. "
+    "Dashboard menggunakan hasil pipeline yang telah menggabungkan "
+    "data transaksi PostgreSQL dan data referensi SQLite menggunakan Pandas."
 )
