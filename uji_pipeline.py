@@ -1,4 +1,3 @@
-
 import getpass
 import sqlite3
 from pathlib import Path
@@ -97,7 +96,7 @@ try:
         ].head().to_string(index=False)
     )
 
-    output = folder / "hasil_pipeline.csv"
+    output = folder / "dashboard_data.csv"
     gabungan.to_csv(output, index=False)
     print("\nFile hasil:", output)
 
