@@ -264,8 +264,6 @@ transit-insight/
 - `transit_reference.db`: basis data referensi SQLite.
 - `dashboard_data.csv`: dataset hasil integrasi yang digunakan oleh dashboard.
 
-File CSV dan basis data yang dihasilkan selama proses pengolahan dapat dibuat ulang dengan menjalankan skrip terkait. Apabila file-file tersebut tidak disertakan di repositori, pengguna perlu menyiapkannya terlebih dahulu sebelum menjalankan tahap berikutnya.
-
 ## 9. Persyaratan Sistem
 
 Sebelum menjalankan proyek secara lokal, pastikan perangkat telah memiliki:
