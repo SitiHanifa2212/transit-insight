@@ -1,7 +1,3 @@
-sql
--- Transit Insight
--- Struktur tabel transaksi PostgreSQL
-
 CREATE TABLE IF NOT EXISTS transaksi (
     "transID" TEXT,
     "corridorID" TEXT,
