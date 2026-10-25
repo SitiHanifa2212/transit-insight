@@ -1,199 +1,301 @@
-# Transit Insight: Dashboard Analisis Transaksi TransJakarta
+# Transit Insight — Dashboard Analisis Transaksi TransJakarta
 
 ## 1. Deskripsi Proyek
 
-Transit Insight merupakan proyek data pipeline dan visualisasi berbasis web untuk menganalisis data transaksi TransJakarta pada April 2023. Proyek ini mengintegrasikan dua sistem manajemen basis data (*Database Management System* atau DBMS), yaitu PostgreSQL dan SQLite, menggunakan Python dan Pandas.
+**Transit Insight** merupakan proyek pengolahan dan visualisasi data transaksi transportasi TransJakarta menggunakan Python, PostgreSQL, SQLite, Pandas, dan Streamlit.
 
-PostgreSQL digunakan untuk menyimpan data transaksi utama, sedangkan SQLite digunakan untuk menyimpan data referensi koridor dan halte. Data dari kedua DBMS diintegrasikan menggunakan Pandas, kemudian hasilnya disiapkan untuk visualisasi melalui dashboard interaktif menggunakan Streamlit dan Plotly.
+Proyek ini mengintegrasikan data transaksi yang disimpan dalam PostgreSQL dengan data referensi koridor dan halte yang disimpan dalam SQLite. Integrasi dilakukan menggunakan Python dan Pandas untuk menghasilkan dataset gabungan yang kemudian digunakan sebagai sumber data dashboard interaktif.
 
-Proyek ini dibuat untuk memenuhi tugas mengenai integrasi multi-DBMS, pengolahan data, dan visualisasi web interaktif.
+Dashboard dirancang untuk membantu pengguna memahami pola transaksi, distribusi tarif, aktivitas perjalanan berdasarkan waktu, serta koridor dan halte yang sering digunakan.
 
 ## 2. Tujuan Proyek
 
-Tujuan pengembangan Transit Insight adalah:
+Proyek ini bertujuan untuk:
 
-- Mengolah dan membersihkan data transaksi TransJakarta.
-- Mengimplementasikan dua DBMS dengan fungsi yang berbeda.
-- Menggabungkan data dari PostgreSQL dan SQLite menggunakan Pandas.
-- Menyajikan informasi transaksi melalui visualisasi interaktif.
-- Membangun dashboard web yang dapat diakses secara publik.
-- Menerapkan proses data pipeline dari data mentah hingga data siap divisualisasikan.
+1. Menerapkan penggunaan dua DBMS berbeda, yaitu PostgreSQL dan SQLite, dalam satu alur pengolahan data.
+2. Mengintegrasikan data dari kedua DBMS menggunakan Python dan Pandas.
+3. Mengolah dan menggabungkan data transaksi dengan informasi referensi koridor dan halte.
+4. Menyajikan hasil pengolahan data melalui dashboard interaktif berbasis web.
+5. Menyediakan visualisasi yang membantu pengguna mengeksplorasi pola transaksi TransJakarta berdasarkan periode waktu dan koridor.
 
 ## 3. Sumber Data
 
-Dataset utama yang digunakan berasal dari Kaggle:
+Dataset utama yang digunakan dalam proyek ini berasal dari Kaggle.
 
-**TransJakarta Transportation Transaction Dataset**
+- **Nama dataset:** TransJakarta Transportation Transaction
+- **Sumber dataset:** [TransJakarta Transportation Transaction — Kaggle](https://www.kaggle.com/datasets/dikisahkan/transjakarta-transportation-transaction)
 
-Sumber dataset:  
-https://www.kaggle.com/datasets/dikisahkan/transjakarta-transportation-transaction
-
-Dataset tersebut digunakan sebagai sumber data transaksi untuk proses pembersihan, pengolahan, integrasi, dan analisis.
+Dataset tersebut digunakan sebagai sumber data transaksi yang kemudian dibersihkan dan dipersiapkan sebelum dimasukkan ke dalam basis data.
 
 ## 4. Teknologi yang Digunakan
 
 | Teknologi | Fungsi |
 |---|---|
-| Python | Bahasa pemrograman utama |
-| PostgreSQL | Menyimpan data transaksi utama |
-| SQLite | Menyimpan data referensi koridor dan halte |
-| Pandas | Membersihkan, mengolah, dan menggabungkan data |
-| SQLAlchemy | Menghubungkan aplikasi Python dengan PostgreSQL |
-| psycopg | Driver koneksi PostgreSQL |
-| Streamlit | Membangun aplikasi dashboard web |
-| Plotly | Membuat visualisasi data interaktif |
-| GitHub | Menyimpan dan mendokumentasikan kode sumber |
-| Streamlit Community Cloud | Melakukan deployment dashboard |
+| Python | Bahasa pemrograman utama untuk pengolahan dan integrasi data. |
+| PostgreSQL | Menyimpan data transaksi TransJakarta. |
+| SQLite | Menyimpan data referensi koridor dan halte. |
+| Pandas | Membersihkan, mengolah, dan menggabungkan data dari kedua DBMS. |
+| SQLAlchemy | Mengelola koneksi Python ke PostgreSQL. |
+| Psycopg | Driver untuk menghubungkan Python dengan PostgreSQL. |
+| Streamlit | Membangun dashboard interaktif berbasis web. |
+| Plotly | Membuat visualisasi data interaktif. |
+| GitHub | Menyimpan kode sumber dan dokumentasi proyek. |
+| Streamlit Community Cloud | Men-deploy dashboard agar dapat diakses secara daring. |
 
-## 5. Arsitektur Data Pipeline
+## 5. Arsitektur Sistem
 
-Transit Insight menggunakan dua DBMS dengan fungsi yang berbeda.
+Transit Insight menggunakan pendekatan integrasi data pada tingkat aplikasi (*application-level data integration*). Data dari PostgreSQL dan SQLite dibaca menggunakan Python, kemudian digabungkan menggunakan Pandas.
 
-### 5.1. PostgreSQL
-
-PostgreSQL digunakan untuk menyimpan data transaksi TransJakarta yang telah melalui proses pembersihan. Data transaksi disimpan dalam tabel `transaksi` dan menjadi sumber utama untuk analisis jumlah transaksi, tarif, waktu transaksi, serta koridor.
-
-### 5.2. SQLite
-
-SQLite digunakan untuk menyimpan data referensi yang berkaitan dengan koridor dan halte. Database referensi disimpan dalam file `transit_reference.db`, yang dibentuk melalui skrip `buat_sqlite.py`.
-
-Database SQLite memiliki tabel berikut:
-
-- `koridor`: menyimpan informasi referensi koridor.
-- `halte`: menyimpan informasi referensi halte, termasuk kode, nama, dan koordinat yang tersedia.
-
-### 5.3. Integrasi Data
-
-Data transaksi dari PostgreSQL dan data referensi dari SQLite diambil melalui skrip Python, kemudian digabungkan menggunakan Pandas pada tingkat aplikasi.
-
-Hasil integrasi disimpan dalam file `hasil_pipeline.csv`. Data yang disiapkan untuk dashboard disimpan dalam file `dashboard_data.csv`.
-
-Alur pipeline:
+### Diagram Arsitektur
 
 ```text
-Dataset TransJakarta dari Kaggle
-              |
-              v
-      bersihkan_data.py
-              |
-              v
-    transjakarta_clean.csv
-              |
-        +-----+-----+
-        |           |
-        v           v
-    PostgreSQL    SQLite
-    transaksi     koridor & halte
-        |           |
-        +-----+-----+
-              |
-              v
-       uji_pipeline.py
-       (Integrasi Pandas)
-              |
-              v
-      hasil_pipeline.csv
-              |
-              v
-      dashboard_data.csv
-              |
-              v
-      Streamlit + Plotly
-              |
-              v
-       Dashboard Publik
+                Dataset TransJakarta
+                         |
+                         v
+                 bersihkan_data.py
+                         |
+                         v
+               transjakarta_clean.csv
+                         |
+              +----------+----------+
+              |                     |
+              v                     v
+       impor_postgres.py       buat_sqlite.py
+              |                     |
+              v                     v
+         PostgreSQL               SQLite
+         Data Transaksi      Data Referensi
+              |               Koridor & Halte
+              |                     |
+              +----------+----------+
+                         |
+                         v
+                   uji_pipeline.py
+                         |
+                         v
+                  Integrasi Pandas
+                         |
+                         v
+                 dashboard_data.csv
+                         |
+                         v
+                       app.py
+                         |
+                         v
+                Streamlit Dashboard
 ```
 
-**Catatan implementasi:** proses integrasi data PostgreSQL dan SQLite dilakukan melalui pipeline Python menggunakan Pandas. Dashboard yang telah di-deploy membaca hasil integrasi dari `dashboard_data.csv`, sehingga tidak memerlukan koneksi langsung ke database lokal ketika diakses oleh pengguna.
+### Peran Masing-Masing DBMS
 
-Dengan demikian, proses integrasi data dan proses penyajian dashboard merupakan dua tahap yang terpisah.
+**PostgreSQL**
 
-## 6. Fitur Dashboard
+PostgreSQL digunakan untuk menyimpan data transaksi TransJakarta, seperti identitas transaksi, koridor, halte keberangkatan dan tujuan, waktu transaksi, serta tarif perjalanan.
 
-Dashboard Transit Insight menyediakan beberapa fitur analisis.
+**SQLite**
 
-- **Filter tanggal:** membatasi data berdasarkan rentang tanggal transaksi.
-- **Filter koridor:** menampilkan data berdasarkan koridor yang dipilih.
-- **Jumlah transaksi:** menampilkan jumlah transaksi sesuai filter.
-- **Total nilai tarif:** menjumlahkan nilai pada kolom `payAmount`.
-- **Rata-rata tarif:** menghitung rata-rata nilai `payAmount`.
-- **Rata-rata durasi perjalanan:** menampilkan rata-rata durasi dalam menit.
-- **Pola transaksi berdasarkan jam:** menampilkan distribusi transaksi berdasarkan waktu tap-in.
-- **Top 10 koridor:** menampilkan koridor dengan jumlah transaksi tertinggi.
-- **Top 10 halte tap-in:** menampilkan halte awal dengan jumlah transaksi tertinggi.
-- **Distribusi tarif:** menampilkan persebaran nilai tarif melalui histogram.
-- **Pratinjau transaksi:** menampilkan sebagian data transaksi dalam bentuk tabel.
+SQLite digunakan untuk menyimpan data referensi yang terdiri atas tabel `koridor` dan `halte`. Data ini membantu melengkapi informasi transaksi dengan referensi koridor serta informasi koordinat halte.
 
-Fitur-fitur tersebut membantu pengguna mengeksplorasi pola transaksi berdasarkan tanggal dan koridor yang dipilih.
+**Pandas**
 
-**Catatan interpretasi:** nilai tarif yang ditampilkan dihitung dari kolom `payAmount` pada dataset. Nilai tersebut tidak diklaim sebagai pendapatan resmi TransJakarta.
+Pandas digunakan untuk membaca data dari kedua DBMS, menggabungkan data transaksi dengan data referensi, dan menghasilkan dataset gabungan dalam format CSV.
 
-## 7. Struktur File Proyek
+**Streamlit**
 
-Repository Transit Insight memiliki struktur file sebagai berikut:
+Streamlit digunakan untuk menampilkan dataset hasil integrasi dalam bentuk dashboard interaktif. Pada implementasi ini, dashboard membaca file `dashboard_data.csv`, bukan mengakses PostgreSQL dan SQLite secara langsung ketika aplikasi dibuka.
+
+## 6. Alur Pengolahan Data
+
+Proses pengolahan data dilakukan melalui beberapa tahap berikut.
+
+### Tahap 1 — Pembersihan Data
+
+File `bersihkan_data.py` digunakan untuk mempersiapkan dataset awal sebelum dimasukkan ke dalam basis data.
+
+Tahapan ini mencakup pemilihan kolom yang diperlukan, konversi kolom waktu menjadi format datetime, serta perhitungan durasi perjalanan dalam menit berdasarkan waktu tap-in dan tap-out.
+
+Hasil pembersihan disimpan dalam file `transjakarta_clean.csv`.
+
+### Tahap 2 — Penyimpanan Data ke PostgreSQL
+
+File `impor_postgres.py` digunakan untuk memasukkan data transaksi yang telah dibersihkan ke dalam PostgreSQL.
+
+Data transaksi disimpan dalam tabel `transaksi` pada basis data `transit_insight`.
+
+File `schema.sql` berisi definisi struktur tabel `transaksi` beserta indeks yang mendukung pencarian berdasarkan waktu transaksi dan koridor.
+
+### Tahap 3 — Penyimpanan Data Referensi ke SQLite
+
+File `buat_sqlite.py` digunakan untuk membangun basis data referensi SQLite dari dataset yang telah dibersihkan.
+
+Data disusun ke dalam dua tabel:
+
+- `koridor`, yang menyimpan informasi referensi koridor.
+- `halte`, yang menyimpan kode halte, nama halte, serta koordinat lintang dan bujur jika tersedia.
+
+Hasil proses ini disimpan dalam file `transit_reference.db`.
+
+### Tahap 4 — Integrasi Data
+
+File `uji_pipeline.py` digunakan untuk membaca data dari PostgreSQL dan SQLite.
+
+Proses integrasi mencakup:
+
+1. Membaca data transaksi dari tabel `transaksi` di PostgreSQL.
+2. Membaca data referensi koridor dan halte dari SQLite.
+3. Menggabungkan data transaksi dengan informasi koridor.
+4. Melengkapi informasi koordinat halte berdasarkan data referensi yang tersedia.
+5. Menyimpan hasil integrasi ke dalam file `dashboard_data.csv`.
+
+Berdasarkan hasil pengujian pipeline, proses berhasil membaca 37.900 baris transaksi, 221 baris data referensi koridor, dan 3.601 baris data referensi halte. Hasil penggabungan menghasilkan 37.900 baris transaksi dengan 14 kolom.
+
+Sebanyak 36.687 baris berhasil dilengkapi koordinat halte pada proses pengisian koordinat. Sebagian data masih belum memiliki koordinat yang dapat dicocokkan dengan referensi halte.
+
+Angka tersebut merupakan hasil pengujian pipeline pada data yang digunakan dan dapat berubah apabila dataset diperbarui.
+
+### Tahap 5 — Visualisasi Data
+
+File `app.py` digunakan untuk membaca `dashboard_data.csv` dan menampilkan hasil pengolahan dalam dashboard Streamlit.
+
+Dashboard menyediakan filter serta visualisasi untuk membantu pengguna mengeksplorasi data transaksi berdasarkan periode waktu dan koridor.
+
+### Ringkasan Alur
+
+```text
+Dataset Awal
+    |
+    v
+Pembersihan Data
+    |
+    v
+transjakarta_clean.csv
+    |
+    +-------------------------+
+    |                         |
+    v                         v
+PostgreSQL                  SQLite
+(transaksi)           (koridor, halte)
+    |                         |
+    +------------+------------+
+                 |
+                 v
+          uji_pipeline.py
+                 |
+                 v
+         dashboard_data.csv
+                 |
+                 v
+              app.py
+                 |
+                 v
+       Dashboard Streamlit
+```
+
+## 7. Fitur Dashboard
+
+Dashboard Transit Insight menyediakan beberapa fitur berikut.
+
+### 7.1 Filter Periode Waktu
+
+Pengguna dapat memilih rentang tanggal untuk melihat data transaksi pada periode tertentu.
+
+### 7.2 Filter Koridor
+
+Pengguna dapat memilih koridor tertentu untuk mengeksplorasi transaksi berdasarkan koridor yang tersedia dalam dataset.
+
+### 7.3 Ringkasan Indikator Utama
+
+Dashboard menampilkan sejumlah indikator ringkasan, antara lain:
+
+- Jumlah transaksi.
+- Total pendapatan berdasarkan nilai tarif yang tercatat.
+- Rata-rata tarif transaksi.
+- Rata-rata durasi perjalanan.
+
+Nilai indikator mengikuti data yang tersedia dan filter yang sedang diterapkan pada dashboard.
+
+### 7.4 Visualisasi Aktivitas Berdasarkan Waktu
+
+Grafik aktivitas per jam membantu pengguna mengamati perubahan jumlah transaksi berdasarkan waktu tap-in.
+
+### 7.5 Analisis Koridor dan Halte
+
+Dashboard menyajikan visualisasi koridor dan halte dengan jumlah transaksi tertinggi berdasarkan data yang tersedia.
+
+### 7.6 Distribusi Tarif
+
+Histogram tarif digunakan untuk melihat distribusi nilai tarif transaksi.
+
+### 7.7 Pratinjau Data
+
+Pengguna dapat melihat sebagian data hasil integrasi dalam bentuk tabel untuk memahami struktur data yang digunakan dalam visualisasi.
+
+## 8. Struktur Proyek
+
+Struktur file utama proyek adalah sebagai berikut.
 
 ```text
 transit-insight/
+│
 ├── app.py
-├── README.md
-├── requirements.txt
-├── .gitignore
-├── schema.sql
 ├── bersihkan_data.py
-├── buat_sqlite.py
-├── cek_data.py
 ├── impor_postgres.py
+├── buat_sqlite.py
 ├── uji_pipeline.py
-├── dashboard_data.csv
+├── schema.sql
+├── requirements.txt
+├── README.md
+│
+├── transjakarta_clean.csv
 ├── transit_reference.db
-└── transjakarta-eda-kmeans.ipynb
+└── dashboard_data.csv
 ```
 
-### Keterangan File
+**Keterangan:**
 
-| File | Fungsi |
-|---|---|
-| `app.py` | Source code utama dashboard Streamlit |
-| `README.md` | Dokumentasi proyek |
-| `requirements.txt` | Daftar dependensi Python |
-| `.gitignore` | Mengatur file yang tidak perlu dimasukkan ke Git |
-| `schema.sql` | Skrip SQL untuk mendefinisikan struktur tabel transaksi PostgreSQL |
-| `bersihkan_data.py` | Membersihkan dan mempersiapkan data transaksi |
-| `buat_sqlite.py` | Membentuk database referensi SQLite |
-| `cek_data.py` | Melakukan pemeriksaan data |
-| `impor_postgres.py` | Mengimpor data bersih ke PostgreSQL |
-| `uji_pipeline.py` | Mengintegrasikan data PostgreSQL dan SQLite menggunakan Pandas |
-| `dashboard_data.csv` | Data yang dibaca oleh dashboard |
-| `transit_reference.db` | Database referensi SQLite |
-| `transjakarta-eda-kmeans.ipynb` | Notebook eksplorasi dan analisis data |
+- `app.py`: kode sumber dashboard Streamlit.
+- `bersihkan_data.py`: skrip pembersihan dan persiapan data.
+- `impor_postgres.py`: skrip untuk memasukkan data transaksi ke PostgreSQL.
+- `buat_sqlite.py`: skrip untuk membangun basis data referensi SQLite.
+- `uji_pipeline.py`: skrip integrasi data dari PostgreSQL dan SQLite.
+- `schema.sql`: definisi struktur tabel PostgreSQL dan indeksnya.
+- `requirements.txt`: daftar dependensi Python.
+- `README.md`: dokumentasi proyek.
+- `transjakarta_clean.csv`: dataset hasil pembersihan.
+- `transit_reference.db`: basis data referensi SQLite.
+- `dashboard_data.csv`: dataset hasil integrasi yang digunakan oleh dashboard.
 
-**Catatan:** `transjakarta_clean.csv` dan `hasil_pipeline.csv` merupakan file keluaran dari proses pengolahan data. Kedua file tersebut dapat dibuat kembali dengan menjalankan pipeline dan tidak harus tersedia di repository apabila memang dikecualikan melalui `.gitignore`.
+File CSV dan basis data yang dihasilkan selama proses pengolahan dapat dibuat ulang dengan menjalankan skrip terkait. Apabila file-file tersebut tidak disertakan di repositori, pengguna perlu menyiapkannya terlebih dahulu sebelum menjalankan tahap berikutnya.
 
-## 8. Persiapan dan Instalasi
+## 9. Persyaratan Sistem
 
-### 8.1. Persyaratan
-
-Pastikan perangkat telah memiliki:
+Sebelum menjalankan proyek secara lokal, pastikan perangkat telah memiliki:
 
 - Python.
-- PostgreSQL untuk menjalankan pipeline integrasi.
-- Git jika ingin mengkloning repository.
-- Koneksi internet untuk mengunduh repository dan dataset.
+- PostgreSQL.
+- Git, jika ingin mengunduh proyek melalui GitHub.
+- Dataset TransJakarta yang digunakan dalam proyek.
+- Dependensi Python yang tercantum pada `requirements.txt`.
 
-SQLite menggunakan pustaka standar Python sehingga tidak memerlukan instalasi server database terpisah.
+Selain itu, basis data PostgreSQL harus tersedia dan dapat diakses oleh skrip Python. Nama basis data, nama tabel, serta konfigurasi koneksi harus sesuai dengan pengaturan yang digunakan dalam skrip.
 
-### 8.2. Mengunduh Repository
+## 10. Instalasi dan Menjalankan Proyek
 
-Jalankan perintah berikut pada terminal:
+### 10.1 Mengunduh Repositori
+
+Unduh repositori proyek dari GitHub:
+
+[Transit Insight — GitHub Repository](https://github.com/SitiHanifa2212/transit-insight)
+
+Atau gunakan perintah berikut:
 
 ```bash
 git clone https://github.com/SitiHanifa2212/transit-insight.git
 cd transit-insight
 ```
 
-### 8.3. Membuat Virtual Environment
+### 10.2 Membuat Virtual Environment
 
-Untuk membuat lingkungan Python terpisah, jalankan:
+Buat lingkungan Python terpisah agar dependensi proyek tidak bercampur dengan proyek lain.
 
 ```bash
 python -m venv .venv
@@ -201,67 +303,60 @@ python -m venv .venv
 
 Aktifkan virtual environment pada Windows:
 
-```bash
+```cmd
 .venv\Scripts\activate
 ```
 
-### 8.4. Menginstal Dependensi
+### 10.3 Menginstal Dependensi
 
 Jalankan perintah berikut:
 
 ```bash
-python -m pip install -r requirements.txt
+python -m pip install --upgrade pip
+pip install -r requirements.txt
 ```
 
-## 9. Menjalankan Pipeline Data
+### 10.4 Menyiapkan Dataset
 
-Pipeline digunakan untuk membersihkan data, menyimpan data pada kedua DBMS, serta mengintegrasikannya menggunakan Pandas.
+Unduh dataset dari sumber yang dicantumkan pada bagian Sumber Data.
 
-### Langkah 1 — Menyiapkan Dataset
+Tempatkan file dataset pada lokasi yang sesuai dengan konfigurasi `bersihkan_data.py`, atau sesuaikan path file pada skrip tersebut.
 
-Unduh dataset dari Kaggle yang tercantum pada bagian sumber data. Pastikan file dataset mentah ditempatkan sesuai dengan lokasi yang ditentukan dalam skrip `bersihkan_data.py`.
-
-Perhatikan bahwa lokasi file dataset pada skrip harus disesuaikan jika lokasi penyimpanan di komputer berbeda.
-
-### Langkah 2 — Membersihkan Data
-
-Jalankan:
+Jalankan proses pembersihan:
 
 ```bash
 python bersihkan_data.py
 ```
 
-Skrip ini memilih kolom yang diperlukan, mengolah kolom waktu, menghitung durasi perjalanan berdasarkan waktu tap-in dan tap-out, serta menghasilkan file `transjakarta_clean.csv`.
+Pastikan proses berhasil menghasilkan `transjakarta_clean.csv`.
 
-### Langkah 3 — Menyiapkan PostgreSQL
+### 10.5 Menyiapkan PostgreSQL
 
-Pastikan layanan PostgreSQL berjalan dan database `transit_insight` telah tersedia. Struktur tabel dapat diperiksa melalui file `schema.sql`.
+Pastikan layanan PostgreSQL sedang berjalan.
 
-Jika menggunakan nama database atau konfigurasi yang berbeda, sesuaikan konfigurasi koneksi pada skrip terkait.
+Buat basis data bernama `transit_insight` jika belum tersedia. Selanjutnya, siapkan tabel transaksi sesuai struktur pada `schema.sql` dan konfigurasi koneksi yang digunakan oleh `impor_postgres.py`.
 
-### Langkah 4 — Mengimpor Data ke PostgreSQL
-
-Jalankan:
+Jalankan skrip impor:
 
 ```bash
 python impor_postgres.py
 ```
 
-Masukkan password PostgreSQL ketika diminta. Skrip akan memasukkan data dari `transjakarta_clean.csv` ke tabel `transaksi`.
+**Catatan:** Periksa perilaku pembuatan tabel pada `impor_postgres.py` sebelum menjalankan ulang proses impor. Jika skrip menggunakan `if_exists="replace"`, tabel yang sudah ada akan diganti sehingga indeks yang dibuat sebelumnya dapat hilang. Jika indeks perlu dipertahankan, sesuaikan urutan pembuatan tabel, impor data, dan penerapan indeks.
 
-**Perhatian:** skrip saat ini menggunakan `if_exists="replace"`, sehingga tabel `transaksi` akan diganti ketika proses impor dijalankan ulang. Pastikan data yang diperlukan sudah dicadangkan sebelum mengulang proses impor.
+### 10.6 Membuat Basis Data SQLite
 
-### Langkah 5 — Membentuk Database Referensi SQLite
-
-Jalankan:
+Jalankan perintah berikut:
 
 ```bash
 python buat_sqlite.py
 ```
 
-Skrip akan membentuk atau memperbarui file `transit_reference.db` beserta tabel `koridor` dan `halte`.
+Skrip akan membangun file `transit_reference.db` beserta tabel `koridor` dan `halte`.
 
-### Langkah 6 — Mengintegrasikan Data
+Pastikan file tersebut berada di lokasi yang dapat ditemukan oleh `uji_pipeline.py`.
+
+### 10.7 Menjalankan Pipeline Integrasi
 
 Jalankan:
 
@@ -269,19 +364,19 @@ Jalankan:
 python uji_pipeline.py
 ```
 
-Masukkan password PostgreSQL ketika diminta. Skrip mengambil data transaksi dari PostgreSQL serta data referensi dari SQLite. Kedua sumber tersebut digabungkan menggunakan Pandas.
+Masukkan kata sandi PostgreSQL apabila diminta oleh program.
 
-Hasil integrasi disimpan dalam file `hasil_pipeline.csv`.
+Jika seluruh proses berhasil, skrip akan menghasilkan:
 
-Siapkan file `dashboard_data.csv` dari hasil pipeline tersebut di folder proyek agar dapat dibaca oleh dashboard.
+```text
+dashboard_data.csv
+```
 
-**Catatan:** jika hanya ingin menjalankan dashboard yang sudah tersedia, langkah-langkah pipeline di bagian ini tidak perlu diulang selama `dashboard_data.csv` sudah tersedia dan sesuai dengan kolom yang dibutuhkan aplikasi.
+File tersebut merupakan hasil integrasi data transaksi dan data referensi dari kedua DBMS.
 
-## 10. Menjalankan Dashboard secara Lokal
+### 10.8 Menjalankan Dashboard
 
-Dashboard dapat dijalankan secara lokal tanpa koneksi langsung ke PostgreSQL dan SQLite, selama file `dashboard_data.csv` tersedia dan memiliki kolom yang dibutuhkan aplikasi.
-
-Jalankan perintah:
+Setelah `dashboard_data.csv` tersedia, jalankan:
 
 ```bash
 python -m streamlit run app.py
@@ -289,48 +384,58 @@ python -m streamlit run app.py
 
 Streamlit akan menampilkan alamat lokal yang dapat dibuka melalui browser.
 
-Dashboard lokal menggunakan file CSV sebagai sumber data visualisasi.
+Gunakan alamat lokal yang ditampilkan oleh terminal untuk mengakses dashboard pada perangkat sendiri.
 
 ## 11. Deployment Dashboard
 
 Dashboard Transit Insight telah dipublikasikan melalui Streamlit Community Cloud.
 
-**Dashboard publik:**  
-https://transit-insight-siti.streamlit.app/
+**Akses dashboard:**
 
-**Repository GitHub:**  
-https://github.com/SitiHanifa2212/transit-insight
+[Transit Insight — Live Dashboard](https://transit-insight-siti.streamlit.app/)
 
-Aplikasi publik membaca `dashboard_data.csv` sebagai sumber data dashboard. Oleh karena itu, dashboard yang telah di-deploy tidak terhubung secara langsung ke PostgreSQL dan SQLite lokal.
+**Repositori kode sumber:**
 
-Pendekatan ini memisahkan proses integrasi data dari proses visualisasi web.
+[Transit Insight — GitHub](https://github.com/SitiHanifa2212/transit-insight)
 
-## 12. Keamanan dan Pengelolaan Data
+Pada implementasi saat ini, dashboard membaca file `dashboard_data.csv` sebagai sumber data visualisasi. Dashboard tidak membuat koneksi langsung ke PostgreSQL dan SQLite saat pengguna membuka aplikasi.
 
-Beberapa hal yang perlu diperhatikan dalam pengelolaan proyek:
+Dengan demikian, proses integrasi data dilakukan melalui pipeline Python terlebih dahulu, sedangkan aplikasi Streamlit berfokus pada penyajian dan eksplorasi data hasil integrasi.
 
-- Password PostgreSQL diminta saat skrip yang memerlukan koneksi dijalankan.
-- Password tidak dituliskan secara langsung dalam source code.
-- File `.env` dan `.streamlit/secrets.toml` dikecualikan melalui `.gitignore`.
-- Dashboard publik menggunakan file CSV yang telah disiapkan sebelumnya.
-- Jika proyek dikembangkan lebih lanjut, konfigurasi kredensial sebaiknya dikelola menggunakan environment variables atau mekanisme secrets pada layanan deployment.
+## 12. Keamanan dan Pengelolaan Kredensial
 
-## 13. Referensi Proyek
+Informasi autentikasi basis data harus dikelola dengan hati-hati.
 
-Sebagai referensi pembelajaran terkait pengolahan dan visualisasi data TransJakarta, proyek ini menggunakan repository berikut sebagai bahan pembanding:
+Praktik keamanan yang diterapkan atau perlu dipertahankan dalam proyek ini meliputi:
 
-**TransJakarta Data Vault**  
-https://github.com/radisahussein/transjakarta_datavault
+1. Tidak menuliskan kata sandi PostgreSQL secara langsung di dalam kode sumber.
+2. Meminta kata sandi melalui mekanisme input tersembunyi apabila skrip menggunakan `getpass`.
+3. Tidak mengunggah file yang berisi kata sandi, token, atau kredensial ke repositori publik.
+4. Menggunakan pengaturan rahasia yang sesuai apabila aplikasi membutuhkan kredensial saat deployment.
+5. Memastikan file konfigurasi lokal yang sensitif dikecualikan melalui `.gitignore`.
 
-Repository tersebut dapat dipelajari untuk memahami pendekatan pengolahan data dan penyajian analitik terkait TransJakarta. Teknologi serta implementasinya berbeda dari Transit Insight.
+Perlu diperhatikan bahwa dashboard saat ini membaca file CSV hasil pipeline dan tidak membutuhkan kredensial PostgreSQL maupun SQLite untuk menampilkan visualisasi. Kredensial hanya diperlukan pada tahap pengolahan data yang terhubung ke PostgreSQL.
 
-## 14. Pengembang
+## 13. Referensi Kode
+
+Proyek ini juga menggunakan repositori berikut sebagai salah satu referensi untuk mempelajari pengolahan data TransJakarta:
+
+[TransJakarta Data Vault — GitHub](https://github.com/radisahussein/transjakarta_datavault)
+
+Repositori tersebut dicantumkan sebagai referensi kode, bukan sebagai pengganti kode sumber utama proyek Transit Insight.
+
+## 14. Batasan Proyek
+
+Beberapa batasan implementasi yang perlu diperhatikan adalah:
+
+1. Kelengkapan koordinat halte bergantung pada kecocokan data transaksi dengan data referensi halte.
+2. Dashboard menggunakan file `dashboard_data.csv` yang dihasilkan oleh pipeline, sehingga perubahan pada basis data tidak otomatis tercermin sampai pipeline dijalankan kembali dan file hasilnya diperbarui.
+3. Hasil analisis bergantung pada kualitas, kelengkapan, dan periode data yang digunakan.
+4. Visualisasi menggambarkan pola berdasarkan data yang tersedia dan tidak dengan sendirinya menjelaskan penyebab di balik pola transaksi.
+
+## 15. Pengembang
 
 **Nama:** Siti Hanifa  
-**Nama Proyek:** Transit Insight — Dashboard Analisis Transaksi TransJakarta
-
-**Repository:**  
-https://github.com/SitiHanifa2212/transit-insight
-
-**Dashboard:**  
-https://transit-insight-siti.streamlit.app/
+**Proyek:** Transit Insight — Dashboard Analisis Transaksi TransJakarta  
+**Bidang:** Integrasi Basis Data dan Visualisasi Data  
+**Platform Dashboard:** Streamlit Community Cloud
